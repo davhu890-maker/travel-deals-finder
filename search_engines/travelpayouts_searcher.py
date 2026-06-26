@@ -106,55 +106,6 @@ class TravelPayoutsSearcher:
             logger.error(f"TravelPayouts cheap routes error: {str(e)}")
             return []
     
-    def search_complex_routes(
-        self,
-        origins: List[str],
-        destination: str,
-        departure_date: str,
-        return_date: str,
-        max_stops: int = 2,
-        max_layover_hours: int = 168  # 7 days
-    ) -> List[Dict[str, Any]]:
-        """Search complex routes with stops in intermediate cities
-        
-        Args:
-            origins: List of departure airports
-            destination: Final destination
-            departure_date: Departure date
-            return_date: Return date
-            max_stops: Maximum number of stops
-            max_layover_hours: Maximum layover duration in hours (7 days = 168 hours)
-            
-        Returns:
-            List of complex routes
-        """
-        all_routes = []
-        
-        for origin in origins:
-            try:
-                # Search from origin to destination with intermediate stops
-                flights = self.search_flights(
-                    origin=origin,
-                    destination=destination,
-                    departure_date=departure_date,
-                    return_date=return_date,
-                    max_stops=max_stops
-                )
-                
-                # Filter by layover duration
-                valid_flights = [
-                    f for f in flights
-                    if self._check_layover_duration(f, max_layover_hours)
-                ]
-                
-                all_routes.extend(valid_flights)
-                
-            except Exception as e:
-                logger.error(f"Error searching complex routes from {origin}: {str(e)}")
-                continue
-        
-        return all_routes
-    
     def _parse_response(self, data: Dict, max_stops: int) -> List[Dict[str, Any]]:
         """Parse TravelPayouts API response"""
         flights = []
@@ -163,7 +114,6 @@ class TravelPayoutsSearcher:
             if not data:
                 return flights
             
-            # Handle different response formats
             if "data" in data:
                 flight_data = data["data"]
             else:
@@ -237,16 +187,3 @@ class TravelPayoutsSearcher:
             return len(flight["segments"]) - 1
         
         return stops
-    
-    @staticmethod
-    def _check_layover_duration(flight: Dict, max_hours: int) -> bool:
-        """Check if layover duration is within limits"""
-        try:
-            if "duration" in flight:
-                duration_minutes = flight["duration"]
-                duration_hours = duration_minutes / 60 if isinstance(duration_minutes, (int, float)) else 0
-                return duration_hours <= max_hours
-        except Exception:
-            pass
-        
-        return True
